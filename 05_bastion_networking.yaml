@@ -18,12 +18,13 @@
       command: nmcli con mod {{ networking.internal_interface_name }} connection.zone internal     
 
     - name: Setting Bastion static ip configuration
-      command: > 
-                nmcli con mod {{ networking.internal_interface_name }} 
-                ipv4.address "{{ networking.internal_network_ip }}/{{ internal_ip_and_mask | ipaddr('prefix') }}"
-                autoconnect yes ipv4.method manual
-
-    
+      nmcli:
+        conn_name: "{{ networking.internal_interface_name }}"
+        ifname: "{{ networking.internal_interface_name }}"
+        ip4: "{{ networking.internal_network_ip }}/{{ internal_ip_and_mask | ipaddr('prefix') }}"
+        state: present
+        autoconnect: yes
+        
     - name: Adding Bastion interface {{ networking.internal_interface_name }} to firewall internal zone  
       firewalld:
         zone: internal
@@ -59,8 +60,11 @@
                ipv4 nat POSTROUTING 0 -o {{ networking.public_interface_name }} -j MASQUERADE
 
     - name: Enabling masquerading on internal interface
-      command: >
-               firewall-cmd --add-masquerade --permanent --zone internal
+      firewalld:
+        masquerade: yes
+        state: enabled
+        permanent: yes
+        zone: internal
 
     - name: Setting up port forwarding from {{ networking.internal_interface_name }} to {{ networking.public_interface_name }}
       command: >
